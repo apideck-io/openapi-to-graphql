@@ -387,6 +387,8 @@ function isSingularParam(part, nextPart) {
  */
 function inferResourceNameFromPath(path) {
     const parts = path.split('/');
+    // @Apideck: Pop first part since it's the Unified Api
+    parts.splice(1, 1);
     let pathNoPathParams = parts.reduce((path, part, i) => {
         if (!/{/g.test(part)) {
             if (parts[i + 1] &&
@@ -563,9 +565,15 @@ function getResponseSchemaAndNames(path, method, operation, oas, data, options) 
             fromRef = responseSchema['$ref'].split('/').pop();
             responseSchema = resolveRef(responseSchema['$ref'], oas);
         }
+        // @Apideck: We always use data in our responses
+        let responseSchemaData = responseSchema.properties.data;
+        if ('$ref' in responseSchemaData) {
+            fromRef = responseSchemaData['$ref'].split('/').pop();
+            responseSchemaData = resolveRef(responseSchemaData['$ref'], oas);
+        }
         const responseSchemaNames = {
-            fromRef,
-            fromSchema: responseSchema.title,
+            fromRef: undefined,
+            fromSchema: responseSchemaData.title,
             fromPath: inferResourceNameFromPath(path)
         };
         /**
@@ -585,7 +593,8 @@ function getResponseSchemaAndNames(path, method, operation, oas, data, options) 
         }
         return {
             responseContentType,
-            responseSchema,
+            // @Apideck: Our responses always have a data property where our real model is in
+            responseSchema: responseSchemaData,
             responseSchemaNames,
             statusCode
         };

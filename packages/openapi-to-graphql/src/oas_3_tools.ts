@@ -527,6 +527,8 @@ function isSingularParam(part, nextPart) {
  */
 export function inferResourceNameFromPath(path: string): string {
   const parts = path.split('/')
+  // @Apideck: Pop first part since it's the Unified Api
+  parts.splice(1, 1)
   let pathNoPathParams = parts.reduce((path, part, i) => {
     if (!/{/g.test(part)) {
       if (
@@ -764,9 +766,17 @@ export function getResponseSchemaAndNames<TSource, TContext, TArgs>(
       responseSchema = resolveRef(responseSchema['$ref'], oas)
     }
 
+    // @Apideck: We always use data in our responses
+    let responseSchemaData = (responseSchema as any).properties.data
+
+    if ('$ref' in responseSchemaData) {
+      fromRef = responseSchemaData['$ref'].split('/').pop()
+      responseSchemaData = resolveRef(responseSchemaData['$ref'], oas)
+    }
+
     const responseSchemaNames = {
-      fromRef,
-      fromSchema: (responseSchema as SchemaObject).title,
+      fromRef: undefined, // @Apideck: For responses we always infer naming from the path or schema titles
+      fromSchema: (responseSchemaData as SchemaObject).title,
       fromPath: inferResourceNameFromPath(path)
     }
 
@@ -793,7 +803,8 @@ export function getResponseSchemaAndNames<TSource, TContext, TArgs>(
 
     return {
       responseContentType,
-      responseSchema,
+      // @Apideck: Our responses always have a data property where our real model is in
+      responseSchema: responseSchemaData,
       responseSchemaNames,
       statusCode
     }
