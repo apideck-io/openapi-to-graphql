@@ -685,6 +685,23 @@ export function getRequestSchemaAndNames(
 }
 
 /**
+ * Returns only given whitelisted props from the schema that has been given
+ */
+export function filterProperties(
+  schema: SchemaObject,
+  whitelist: string[]
+): SchemaObject {
+  const newProperties = Object.entries(schema.properties)
+    .filter(([property]) => whitelist.includes(property))
+    .reduce((acc, [property, value]) => {
+      acc[property] = value
+      return acc
+    }, {})
+  //
+  return { ...schema, properties: newProperties }
+}
+
+/**
  * Returns JSON-compatible schema produced by the given operation
  */
 export function getResponseObject(
@@ -767,7 +784,9 @@ export function getResponseSchemaAndNames<TSource, TContext, TArgs>(
     }
 
     // @Apideck: We always use data in our responses
-    let responseSchemaData = (responseSchema as any).properties.data
+    let responseSchemaData = (responseSchema as SchemaObject).properties.links
+      ? filterProperties(responseSchema, ['data', 'meta'])
+      : (responseSchema as SchemaObject).properties.data
 
     if ('$ref' in responseSchemaData) {
       fromRef = responseSchemaData['$ref'].split('/').pop()
@@ -776,7 +795,9 @@ export function getResponseSchemaAndNames<TSource, TContext, TArgs>(
 
     const responseSchemaNames = {
       fromRef: undefined, // @Apideck: For responses we always infer naming from the path or schema titles
-      fromSchema: (responseSchemaData as SchemaObject).title,
+      fromSchema:
+        (responseSchemaData as SchemaObject).title ||
+        (responseSchemaData as SchemaObject)['x-graphql-title'],
       fromPath: inferResourceNameFromPath(path)
     }
 

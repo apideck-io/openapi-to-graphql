@@ -86,9 +86,11 @@ function createGraphQLSchema(spec, options) {
             // Convert all non-OAS 3 into OAS 3
             Promise.all(spec.map((ele) => {
                 return Oas3Tools.getValidOAS3(ele);
-            })).then((oass) => {
+            }))
+                .then((oass) => {
                 resolve(translateOpenAPIToGraphQL(oass, options));
-            }).catch((error) => {
+            })
+                .catch((error) => {
                 reject(error);
             });
         }
@@ -98,7 +100,8 @@ function createGraphQLSchema(spec, options) {
              * If the spec is OAS 2.0, attempt to translate it into 3, then try to
              * translate the spec into a GraphQL schema
              */
-            Oas3Tools.getValidOAS3(spec).then((oas) => {
+            Oas3Tools.getValidOAS3(spec)
+                .then((oas) => {
                 resolve(translateOpenAPIToGraphQL([oas], options));
             })
                 .catch((error) => {
@@ -173,7 +176,8 @@ provideErrorExtensions, equivalentToMessages }) {
         // Check if the operation should be added as a Query or Mutation
         if (operation.operationType === graphql_1.GraphQLOperationType.Query) {
             let fieldName = !singularNames
-                ? Oas3Tools.uncapitalize(operation.responseDefinition.graphQLTypeName)
+                ? Oas3Tools.uncapitalize(operation.operation['x-graphql-title'] ||
+                    operation.responseDefinition.graphQLTypeName)
                 : Oas3Tools.sanitize(Oas3Tools.inferResourceNameFromPath(operation.path), Oas3Tools.CaseStyle.camelCase);
             if (operation.inViewer) {
                 for (let securityRequirement of operation.securityRequirements) {

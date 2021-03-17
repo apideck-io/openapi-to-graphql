@@ -157,33 +157,36 @@ export function createGraphQLSchema<TSource, TContext, TArgs>(
         spec.map((ele) => {
           return Oas3Tools.getValidOAS3(ele)
         })
-      ).then((oass) => {
-        resolve(
-          translateOpenAPIToGraphQL(
-            oass,
-            options as InternalOptions<TSource, TContext, TArgs>
+      )
+        .then((oass) => {
+          resolve(
+            translateOpenAPIToGraphQL(
+              oass,
+              options as InternalOptions<TSource, TContext, TArgs>
+            )
           )
-        )
-      }).catch((error) => {
-        reject(error)
-      })
+        })
+        .catch((error) => {
+          reject(error)
+        })
     } else {
       /**
        * Check if the spec is a valid OAS 3
        * If the spec is OAS 2.0, attempt to translate it into 3, then try to
        * translate the spec into a GraphQL schema
        */
-      Oas3Tools.getValidOAS3(spec).then((oas) => {
-        resolve(
-          translateOpenAPIToGraphQL(
-            [oas],
-            options as InternalOptions<TSource, TContext, TArgs>
+      Oas3Tools.getValidOAS3(spec)
+        .then((oas) => {
+          resolve(
+            translateOpenAPIToGraphQL(
+              [oas],
+              options as InternalOptions<TSource, TContext, TArgs>
+            )
           )
-        )
-      })
-      .catch((error) => {
-        reject(error)
-      })
+        })
+        .catch((error) => {
+          reject(error)
+        })
     }
   })
 }
@@ -319,7 +322,10 @@ function translateOpenAPIToGraphQL<TSource, TContext, TArgs>(
     // Check if the operation should be added as a Query or Mutation
     if (operation.operationType === GraphQLOperationType.Query) {
       let fieldName = !singularNames
-        ? Oas3Tools.uncapitalize(operation.responseDefinition.graphQLTypeName)
+        ? Oas3Tools.uncapitalize(
+            operation.operation['x-graphql-title'] ||
+              operation.responseDefinition.graphQLTypeName
+          )
         : Oas3Tools.sanitize(
             Oas3Tools.inferResourceNameFromPath(operation.path),
             Oas3Tools.CaseStyle.camelCase

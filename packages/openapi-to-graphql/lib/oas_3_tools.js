@@ -4,7 +4,7 @@
 // This file is licensed under the MIT License.
 // License text available at https://opensource.org/licenses/MIT
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.generateOperationId = exports.uncapitalize = exports.capitalize = exports.formatOperationString = exports.isHttpMethod = exports.trim = exports.storeSaneName = exports.sanitize = exports.CaseStyle = exports.getSecurityRequirements = exports.getSecuritySchemes = exports.getServers = exports.getParameters = exports.getLinks = exports.getResponseStatusCode = exports.getResponseSchemaAndNames = exports.getResponseObject = exports.getRequestSchemaAndNames = exports.getRequestBodyObject = exports.inferResourceNameFromPath = exports.getSchemaTargetGraphQLType = exports.desanitizeObjectKeys = exports.sanitizeObjectKeys = exports.getBaseUrl = exports.resolveRef = exports.countOperationsWithPayload = exports.countOperationsSubscription = exports.countOperationsMutation = exports.countOperationsQuery = exports.countOperations = exports.getValidOAS3 = exports.methodToHttpMethod = exports.SUCCESS_STATUS_RX = exports.HTTP_METHODS = void 0;
+exports.generateOperationId = exports.uncapitalize = exports.capitalize = exports.formatOperationString = exports.isHttpMethod = exports.trim = exports.storeSaneName = exports.sanitize = exports.CaseStyle = exports.getSecurityRequirements = exports.getSecuritySchemes = exports.getServers = exports.getParameters = exports.getLinks = exports.getResponseStatusCode = exports.getResponseSchemaAndNames = exports.getResponseObject = exports.filterProperties = exports.getRequestSchemaAndNames = exports.getRequestBodyObject = exports.inferResourceNameFromPath = exports.getSchemaTargetGraphQLType = exports.desanitizeObjectKeys = exports.sanitizeObjectKeys = exports.getBaseUrl = exports.resolveRef = exports.countOperationsWithPayload = exports.countOperationsSubscription = exports.countOperationsMutation = exports.countOperationsQuery = exports.countOperations = exports.getValidOAS3 = exports.methodToHttpMethod = exports.SUCCESS_STATUS_RX = exports.HTTP_METHODS = void 0;
 // Imports:
 const Swagger2OpenAPI = require("swagger2openapi");
 const OASValidator = require("oas-validator");
@@ -509,6 +509,20 @@ function getRequestSchemaAndNames(path, method, operation, oas) {
 }
 exports.getRequestSchemaAndNames = getRequestSchemaAndNames;
 /**
+ * Returns only given whitelisted props from the schema that has been given
+ */
+function filterProperties(schema, whitelist) {
+    const newProperties = Object.entries(schema.properties)
+        .filter(([property]) => whitelist.includes(property))
+        .reduce((acc, [property, value]) => {
+        acc[property] = value;
+        return acc;
+    }, {});
+    //
+    return Object.assign(Object.assign({}, schema), { properties: newProperties });
+}
+exports.filterProperties = filterProperties;
+/**
  * Returns JSON-compatible schema produced by the given operation
  */
 function getResponseObject(operation, statusCode, oas) {
@@ -566,14 +580,17 @@ function getResponseSchemaAndNames(path, method, operation, oas, data, options) 
             responseSchema = resolveRef(responseSchema['$ref'], oas);
         }
         // @Apideck: We always use data in our responses
-        let responseSchemaData = responseSchema.properties.data;
+        let responseSchemaData = responseSchema.properties.links
+            ? filterProperties(responseSchema, ['data', 'meta'])
+            : responseSchema.properties.data;
         if ('$ref' in responseSchemaData) {
             fromRef = responseSchemaData['$ref'].split('/').pop();
             responseSchemaData = resolveRef(responseSchemaData['$ref'], oas);
         }
         const responseSchemaNames = {
             fromRef: undefined,
-            fromSchema: responseSchemaData.title,
+            fromSchema: responseSchemaData.title ||
+                responseSchemaData['x-graphql-title'],
             fromPath: inferResourceNameFromPath(path)
         };
         /**

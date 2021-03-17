@@ -112,6 +112,10 @@ export declare function getRequestBodyObject(operation: OperationObject, oas: Oa
  */
 export declare function getRequestSchemaAndNames(path: string, method: HTTP_METHODS, operation: OperationObject, oas: Oas3): RequestSchemaAndNames;
 /**
+ * Returns only given whitelisted props from the schema that has been given
+ */
+export declare function filterProperties(schema: SchemaObject, whitelist: string[]): SchemaObject;
+/**
  * Returns JSON-compatible schema produced by the given operation
  */
 export declare function getResponseObject(operation: OperationObject, statusCode: string, oas: Oas3): {
