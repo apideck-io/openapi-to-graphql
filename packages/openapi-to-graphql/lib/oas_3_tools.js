@@ -463,7 +463,7 @@ function getRequestSchemaAndNames(path, method, operation, oas) {
             payloadSchema = resolveRef(payloadSchema['$ref'], oas);
         }
         let payloadSchemaNames = {
-            fromRef,
+            fromRef: payloadSchema['x-graphql-type-name'] || fromRef,
             fromSchema: payloadSchema.title,
             fromPath: inferResourceNameFromPath(path)
         };
@@ -589,8 +589,8 @@ function getResponseSchemaAndNames(path, method, operation, oas, data, options) 
         }
         const responseSchemaNames = {
             fromRef: undefined,
-            fromSchema: responseSchemaData.title ||
-                responseSchemaData['x-graphql-title'],
+            fromSchema: responseSchemaData['x-graphql-type-name'] ||
+                responseSchemaData.title,
             fromPath: inferResourceNameFromPath(path)
         };
         /**

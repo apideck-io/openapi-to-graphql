@@ -625,7 +625,8 @@ export function getRequestSchemaAndNames(
     }
 
     let payloadSchemaNames: any = {
-      fromRef,
+      fromRef:
+        (payloadSchema as SchemaObject)['x-graphql-type-name'] || fromRef,
       fromSchema: (payloadSchema as SchemaObject).title,
       fromPath: inferResourceNameFromPath(path)
     }
@@ -796,8 +797,8 @@ export function getResponseSchemaAndNames<TSource, TContext, TArgs>(
     const responseSchemaNames = {
       fromRef: undefined, // @Apideck: For responses we always infer naming from the path or schema titles
       fromSchema:
-        (responseSchemaData as SchemaObject).title ||
-        (responseSchemaData as SchemaObject)['x-graphql-title'],
+        (responseSchemaData as SchemaObject)['x-graphql-type-name'] ||
+        (responseSchemaData as SchemaObject).title,
       fromPath: inferResourceNameFromPath(path)
     }
 

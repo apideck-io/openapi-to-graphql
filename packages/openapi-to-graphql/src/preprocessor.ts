@@ -882,7 +882,9 @@ export function createDataDef<TSource, TContext, TArgs>(
 
               const subDefinition = createDataDef(
                 // Is this the correct classification for this name? It does not matter in the long run.
-                { fromRef: itemsName },
+                {
+                  fromRef: collapsedSchema['x-graphql-type-name'] || itemsName
+                },
                 itemsSchema as SchemaObject,
                 isInputObjectType,
                 data,
@@ -1110,7 +1112,7 @@ function addObjectPropertiesToDataDef<TSource, TContext, TArgs>(
     if (!(propertyKey in def.subDefinitions)) {
       const subDefinition = createDataDef(
         {
-          fromRef: propSchemaName,
+          fromRef: propSchema['x-graphql-type-name'] || propSchemaName,
           fromSchema: propSchema.title // TODO: Currently not utilized because of fromRef but arguably, propertyKey is a better field name and title is a better type name
         },
         propSchema,
@@ -1462,7 +1464,8 @@ function createDataDefFromAnyOf<TSource, TContext, TArgs>(
 
               const subDefinition = createDataDef(
                 {
-                  fromRef: propertyName,
+                  fromRef:
+                    propertySchema['x-graphql-type-name'] || propertyName,
                   fromSchema: propertySchema.title // TODO: Currently not utilized because of fromRef but arguably, propertyKey is a better field name and title is a better type name
                 },
                 propertySchema,
@@ -1594,7 +1597,7 @@ function createDataDefFromOneOf<TSource, TContext, TArgs>(
           ) {
             const subDefinition = createDataDef(
               {
-                fromRef,
+                fromRef: memberSchema['x-graphql-type-name'] || fromRef,
                 fromSchema: memberSchema.title,
                 fromPath: `${saneName}Member`
               },

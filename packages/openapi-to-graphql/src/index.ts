@@ -323,7 +323,7 @@ function translateOpenAPIToGraphQL<TSource, TContext, TArgs>(
     if (operation.operationType === GraphQLOperationType.Query) {
       let fieldName = !singularNames
         ? Oas3Tools.uncapitalize(
-            operation.operation['x-graphql-title'] ||
+            operation.operation['x-graphql-operation-name'] ||
               operation.responseDefinition.graphQLTypeName
           )
         : Oas3Tools.sanitize(

@@ -345,7 +345,7 @@ function createOrReuseList({ def, operation, iteration, isInputObjectType, data 
         return listObjectType;
     }
     else {
-        throw new Error(`Cannot create list item object type '${itemsName}' in list 
+        throw new Error(`Cannot create list item object type '${itemsName}' in list
     '${name}' with schema '${JSON.stringify(itemsSchema)}'`);
     }
 }
@@ -365,8 +365,9 @@ function createOrReuseEnum({ def, data }) {
     else {
         translationLog(`Create GraphQLEnumType '${def.graphQLTypeName}'`);
         const values = {};
+        const mapping = def.schema['x-graphql-enum-mapping'] || {};
         def.schema.enum.forEach((e) => {
-            values[Oas3Tools.sanitize(e.toString(), !data.options.simpleEnumValues
+            values[Oas3Tools.sanitize(mapping[e.toString()] || e.toString(), !data.options.simpleEnumValues
                 ? Oas3Tools.CaseStyle.ALL_CAPS
                 : Oas3Tools.CaseStyle.simple)] = {
                 value: e

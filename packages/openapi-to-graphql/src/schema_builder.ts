@@ -512,7 +512,7 @@ function createOrReuseList<TSource, TContext, TArgs>({
     }
     return listObjectType
   } else {
-    throw new Error(`Cannot create list item object type '${itemsName}' in list 
+    throw new Error(`Cannot create list item object type '${itemsName}' in list
     '${name}' with schema '${JSON.stringify(itemsSchema)}'`)
   }
 }
@@ -536,10 +536,11 @@ function createOrReuseEnum<TSource, TContext, TArgs>({
     translationLog(`Create GraphQLEnumType '${def.graphQLTypeName}'`)
 
     const values = {}
+    const mapping = def.schema['x-graphql-enum-mapping'] || {}
     def.schema.enum.forEach((e) => {
       values[
         Oas3Tools.sanitize(
-          e.toString(),
+          mapping[e.toString()] || e.toString(),
           !data.options.simpleEnumValues
             ? Oas3Tools.CaseStyle.ALL_CAPS
             : Oas3Tools.CaseStyle.simple

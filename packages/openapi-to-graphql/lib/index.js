@@ -176,7 +176,7 @@ provideErrorExtensions, equivalentToMessages }) {
         // Check if the operation should be added as a Query or Mutation
         if (operation.operationType === graphql_1.GraphQLOperationType.Query) {
             let fieldName = !singularNames
-                ? Oas3Tools.uncapitalize(operation.operation['x-graphql-title'] ||
+                ? Oas3Tools.uncapitalize(operation.operation['x-graphql-operation-name'] ||
                     operation.responseDefinition.graphQLTypeName)
                 : Oas3Tools.sanitize(Oas3Tools.inferResourceNameFromPath(operation.path), Oas3Tools.CaseStyle.camelCase);
             if (operation.inViewer) {
