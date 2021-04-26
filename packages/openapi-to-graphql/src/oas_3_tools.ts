@@ -797,11 +797,19 @@ export function getResponseSchemaAndNames<TSource, TContext, TArgs>(
 
   // @Apideck: We always use data in our responses
   const dataSchema = responseSchema.properties.data
-  const resolvedDataSchema =
-    '$ref' in dataSchema
-      ? resolveRef<SchemaObject>(dataSchema.$ref, oas)
-      : dataSchema
-  let responseSchemaData = responseSchema.properties.links
+  const isListCall = Boolean(responseSchema.properties.links)
+
+  let resolvedDataSchema: SchemaObject
+  if ('$ref' in dataSchema) {
+    resolvedDataSchema = resolveRef<SchemaObject>(dataSchema.$ref, oas)
+    if (!isListCall) {
+      fromRef = dataSchema.$ref.split('/').pop()
+    }
+  } else {
+    resolvedDataSchema = dataSchema
+  }
+
+  let responseSchemaData = isListCall
     ? filterProperties(responseSchema, ['data', 'meta'])
     : resolvedDataSchema
 

@@ -598,10 +598,18 @@ function getResponseSchemaAndNames(path, method, operation, oas, data, options) 
     }
     // @Apideck: We always use data in our responses
     const dataSchema = responseSchema.properties.data;
-    const resolvedDataSchema = '$ref' in dataSchema
-        ? resolveRef(dataSchema.$ref, oas)
-        : dataSchema;
-    let responseSchemaData = responseSchema.properties.links
+    const isListCall = Boolean(responseSchema.properties.links);
+    let resolvedDataSchema;
+    if ('$ref' in dataSchema) {
+        resolvedDataSchema = resolveRef(dataSchema.$ref, oas);
+        if (!isListCall) {
+            fromRef = dataSchema.$ref.split('/').pop();
+        }
+    }
+    else {
+        resolvedDataSchema = dataSchema;
+    }
+    let responseSchemaData = isListCall
         ? filterProperties(responseSchema, ['data', 'meta'])
         : resolvedDataSchema;
     responseSchemaNames = {
