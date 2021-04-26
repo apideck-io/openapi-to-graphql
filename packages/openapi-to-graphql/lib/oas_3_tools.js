@@ -601,9 +601,9 @@ function getResponseSchemaAndNames(path, method, operation, oas, data, options) 
         ? filterProperties(responseSchema, ['data', 'meta'])
         : responseSchema.properties.data;
     responseSchemaNames = {
-        fromExtension: responseSchema === null || responseSchema === void 0 ? void 0 : responseSchema[OAS_GRAPHQL_EXTENSIONS.TypeName],
+        fromExtension: responseSchemaData === null || responseSchemaData === void 0 ? void 0 : responseSchemaData[OAS_GRAPHQL_EXTENSIONS.TypeName],
         fromRef,
-        fromSchema: responseSchema === null || responseSchema === void 0 ? void 0 : responseSchema.title,
+        fromSchema: responseSchemaData === null || responseSchemaData === void 0 ? void 0 : responseSchemaData.title,
         fromPath: inferResourceNameFromPath(path)
     };
     /**

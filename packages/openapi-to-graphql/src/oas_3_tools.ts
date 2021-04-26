@@ -796,14 +796,14 @@ export function getResponseSchemaAndNames<TSource, TContext, TArgs>(
   }
 
   // @Apideck: We always use data in our responses
-  let responseSchemaData = (responseSchema as SchemaObject).properties.links
+  let responseSchemaData = responseSchema.properties.links
     ? filterProperties(responseSchema, ['data', 'meta'])
-    : (responseSchema as SchemaObject).properties.data
+    : (responseSchema.properties.data as SchemaObject)
 
   responseSchemaNames = {
-    fromExtension: responseSchema?.[OAS_GRAPHQL_EXTENSIONS.TypeName],
+    fromExtension: responseSchemaData?.[OAS_GRAPHQL_EXTENSIONS.TypeName],
     fromRef,
-    fromSchema: responseSchema?.title,
+    fromSchema: responseSchemaData?.title,
     fromPath: inferResourceNameFromPath(path)
   }
 
