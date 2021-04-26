@@ -790,15 +790,20 @@ export function getResponseSchemaAndNames<TSource, TContext, TArgs>(
   // Resolve response schema reference if applicable
   if (responseSchemaOrRef && '$ref' in responseSchemaOrRef) {
     fromRef = responseSchemaOrRef.$ref.split('/').pop()
-    responseSchema = resolveRef(responseSchemaOrRef.$ref, oas) as SchemaObject
+    responseSchema = resolveRef<SchemaObject>(responseSchemaOrRef.$ref, oas)
   } else {
     responseSchema = responseSchemaOrRef as SchemaObject
   }
 
   // @Apideck: We always use data in our responses
+  const dataSchema = responseSchema.properties.data
+  const resolvedDataSchema =
+    '$ref' in dataSchema
+      ? resolveRef<SchemaObject>(dataSchema.$ref, oas)
+      : dataSchema
   let responseSchemaData = responseSchema.properties.links
     ? filterProperties(responseSchema, ['data', 'meta'])
-    : (responseSchema.properties.data as SchemaObject)
+    : resolvedDataSchema
 
   responseSchemaNames = {
     fromExtension: responseSchemaData?.[OAS_GRAPHQL_EXTENSIONS.TypeName],

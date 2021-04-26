@@ -597,9 +597,13 @@ function getResponseSchemaAndNames(path, method, operation, oas, data, options) 
         responseSchema = responseSchemaOrRef;
     }
     // @Apideck: We always use data in our responses
+    const dataSchema = responseSchema.properties.data;
+    const resolvedDataSchema = '$ref' in dataSchema
+        ? resolveRef(dataSchema.$ref, oas)
+        : dataSchema;
     let responseSchemaData = responseSchema.properties.links
         ? filterProperties(responseSchema, ['data', 'meta'])
-        : responseSchema.properties.data;
+        : resolvedDataSchema;
     responseSchemaNames = {
         fromExtension: responseSchemaData === null || responseSchemaData === void 0 ? void 0 : responseSchemaData[OAS_GRAPHQL_EXTENSIONS.TypeName],
         fromRef,
