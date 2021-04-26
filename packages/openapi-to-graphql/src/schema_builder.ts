@@ -536,18 +536,25 @@ function createOrReuseEnum<TSource, TContext, TArgs>({
     translationLog(`Create GraphQLEnumType '${def.graphQLTypeName}'`)
 
     const values = {}
-    const mapping = def.schema['x-graphql-enum-mapping'] || {}
-    def.schema.enum.forEach((e) => {
-      values[
+    const mapping =
+      def.schema[Oas3Tools.OAS_GRAPHQL_EXTENSIONS.EnumMapping] || {}
+    def.schema.enum.forEach((enumValue) => {
+      const enumValueString = enumValue.toString()
+      const fromExtension = mapping[enumValueString]
+      const saneEnumValue =
+        fromExtension ||
         Oas3Tools.sanitize(
-          mapping[e.toString()] || e.toString(),
+          enumValueString,
           !data.options.simpleEnumValues
             ? Oas3Tools.CaseStyle.ALL_CAPS
             : Oas3Tools.CaseStyle.simple
         )
-      ] = {
-        value: e
+      if (fromExtension in values) {
+        throw new Error(
+          `Cannot create enum value "${fromExtension}".\nYou provided "${fromExtension}" in ${Oas3Tools.OAS_GRAPHQL_EXTENSIONS.EnumMapping}, but it conflicts with another enum value "${fromExtension}"`
+        )
       }
+      values[saneEnumValue] = { value: enumValue }
     })
 
     // Store newly created Enum Object Type
@@ -631,12 +638,23 @@ function createFields<TSource, TContext, TArgs>({
 
     // Finally, add the object type to the fields (using sanitized field name)
     if (objectType) {
-      const saneFieldTypeKey = Oas3Tools.sanitize(
-        fieldTypeKey,
-        !data.options.simpleNames
-          ? Oas3Tools.CaseStyle.camelCase
-          : Oas3Tools.CaseStyle.simple
-      )
+      const fromExtension =
+        fieldSchema?.[Oas3Tools.OAS_GRAPHQL_EXTENSIONS.FieldName]
+
+      if (fromExtension && fromExtension in fields) {
+        throw new Error(
+          `Cannot create field with name "${fromExtension}".\nYou provided "${fromExtension}" in ${Oas3Tools.OAS_GRAPHQL_EXTENSIONS.FieldName}, but it conflicts with another field called "${fromExtension}"`
+        )
+      }
+
+      const saneFieldTypeKey =
+        fromExtension ||
+        Oas3Tools.sanitize(
+          fieldTypeKey,
+          !data.options.simpleNames
+            ? Oas3Tools.CaseStyle.camelCase
+            : Oas3Tools.CaseStyle.simple
+        )
 
       const sanePropName = Oas3Tools.storeSaneName(
         saneFieldTypeKey,
@@ -1183,7 +1201,7 @@ export function getArgs<TSource, TContext, TArgs>({
      * we can avoid doing it a second time in resolveRev()
      */
     if ('$ref' in schema) {
-      schema = Oas3Tools.resolveRef(schema['$ref'], operation.oas)
+      schema = Oas3Tools.resolveRef(schema.$ref, operation.oas)
     }
 
     const paramDef = createDataDef(
@@ -1219,10 +1237,10 @@ export function getArgs<TSource, TContext, TArgs>({
     let hasDefault = false
     if (typeof parameter.schema === 'object') {
       let schema = parameter.schema
-      if (typeof schema.$ref === 'string') {
-        schema = Oas3Tools.resolveRef(parameter.schema.$ref, operation.oas)
+      if ('$ref' in schema) {
+        schema = Oas3Tools.resolveRef<SchemaObject>(schema.$ref, operation.oas)
       }
-      if (typeof (schema as SchemaObject).default !== 'undefined') {
+      if (typeof schema.default !== 'undefined') {
         hasDefault = true
       }
     }

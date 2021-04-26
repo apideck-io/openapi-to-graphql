@@ -35,7 +35,8 @@ import {
   Options,
   InternalOptions,
   Report,
-  ConnectOptions
+  ConnectOptions,
+  RequestOptions
 } from './types/options'
 import { Oas3 } from './types/oas3'
 import { Oas2 } from './types/oas2'
@@ -52,7 +53,6 @@ import {
   GraphQLOutputType,
   GraphQLFieldConfig
 } from 'graphql'
-import * as NodeRequest from 'request'
 
 // Imports:
 import { getGraphQLType, getArgs } from './schema_builder'
@@ -69,13 +69,60 @@ import debug from 'debug'
 import { GraphQLSchemaConfig } from 'graphql/type/schema'
 import { sortObject, handleWarning, MitigationTypes } from './utils'
 
+const translationLog = debug('translation')
+
 type Result<TSource, TContext, TArgs> = {
   schema: GraphQLSchema
   report: Report
   data: PreprocessingData<TSource, TContext, TArgs>
 }
 
-const translationLog = debug('translation')
+const DEFAULT_OPTIONS: InternalOptions<any, any, any> = {
+  report: {
+    warnings: [],
+    numOps: 0,
+    numOpsQuery: 0,
+    numOpsMutation: 0,
+    numOpsSubscription: 0,
+    numQueriesCreated: 0,
+    numMutationsCreated: 0,
+    numSubscriptionsCreated: 0
+  },
+
+  // Setting default options
+  strict: false,
+
+  // Schema options
+  operationIdFieldNames: false,
+  fillEmptyResponses: false,
+  addLimitArgument: false,
+  idFormats: [],
+  selectQueryOrMutationField: {},
+  genericPayloadArgName: false,
+  simpleNames: false,
+  simpleEnumValues: false,
+  singularNames: false,
+  createSubscriptionsFromCallbacks: false,
+
+  // Resolver options
+  headers: {},
+  qs: {},
+  requestOptions: {},
+  customResolvers: {},
+  customSubscriptionResolvers: {},
+
+  // Authentication options
+  viewer: true,
+  sendOAuthTokenInQuery: false,
+
+  // Validation options
+  oasValidatorOptions: {},
+  swagger2OpenAPIOptions: {},
+
+  // Logging options
+  provideErrorExtensions: true,
+  equivalentToMessages: true
+}
 
 /**
  * Creates a GraphQL interface from the given OpenAPI Specification (2 or 3).
@@ -85,86 +132,25 @@ export function createGraphQLSchema<TSource, TContext, TArgs>(
   options?: Options<TSource, TContext, TArgs>
 ): Promise<Result<TSource, TContext, TArgs>> {
   return new Promise((resolve, reject) => {
-    if (typeof options === 'undefined') {
-      options = {}
-    }
-
     // Setting default options
-    options.strict =
-      typeof options.strict === 'boolean' ? options.strict : false
-
-    // Schema options
-    options.operationIdFieldNames =
-      typeof options.operationIdFieldNames === 'boolean'
-        ? options.operationIdFieldNames
-        : false
-    options.fillEmptyResponses =
-      typeof options.fillEmptyResponses === 'boolean'
-        ? options.fillEmptyResponses
-        : false
-    options.addLimitArgument =
-      typeof options.addLimitArgument === 'boolean'
-        ? options.addLimitArgument
-        : false
-    options.genericPayloadArgName =
-      typeof options.genericPayloadArgName === 'boolean'
-        ? options.genericPayloadArgName
-        : false
-    options.simpleNames =
-      typeof options.simpleNames === 'boolean' ? options.simpleNames : false
-    options.simpleEnumValues =
-      typeof options.simpleEnumValues === 'boolean'
-        ? options.simpleEnumValues
-        : false
-    options.singularNames =
-      typeof options.singularNames === 'boolean' ? options.singularNames : false
-    options.createSubscriptionsFromCallbacks =
-      typeof options.createSubscriptionsFromCallbacks === 'boolean'
-        ? options.createSubscriptionsFromCallbacks
-        : false
-
-    // Authentication options
-    options.viewer = typeof options.viewer === 'boolean' ? options.viewer : true
-    options.sendOAuthTokenInQuery =
-      typeof options.sendOAuthTokenInQuery === 'boolean'
-        ? options.sendOAuthTokenInQuery
-        : false
-
-    // Logging options
-    options.provideErrorExtensions =
-      typeof options.provideErrorExtensions === 'boolean'
-        ? options.provideErrorExtensions
-        : true
-    options.equivalentToMessages =
-      typeof options.equivalentToMessages === 'boolean'
-        ? options.equivalentToMessages
-        : true
-
-    options['report'] = {
-      warnings: [],
-      numOps: 0,
-      numOpsQuery: 0,
-      numOpsMutation: 0,
-      numOpsSubscription: 0,
-      numQueriesCreated: 0,
-      numMutationsCreated: 0,
-      numSubscriptionsCreated: 0
+    const internalOptions: InternalOptions<TSource, TContext, TArgs> = {
+      ...DEFAULT_OPTIONS,
+      ...options
     }
 
     if (Array.isArray(spec)) {
       // Convert all non-OAS 3 into OAS 3
       Promise.all(
         spec.map((ele) => {
-          return Oas3Tools.getValidOAS3(ele)
+          return Oas3Tools.getValidOAS3(
+            ele,
+            internalOptions.oasValidatorOptions,
+            internalOptions.swagger2OpenAPIOptions
+          )
         })
       )
         .then((oass) => {
-          resolve(
-            translateOpenAPIToGraphQL(
-              oass,
-              options as InternalOptions<TSource, TContext, TArgs>
-            )
-          )
+          resolve(translateOpenAPIToGraphQL(oass, internalOptions))
         })
         .catch((error) => {
           reject(error)
@@ -175,14 +161,13 @@ export function createGraphQLSchema<TSource, TContext, TArgs>(
        * If the spec is OAS 2.0, attempt to translate it into 3, then try to
        * translate the spec into a GraphQL schema
        */
-      Oas3Tools.getValidOAS3(spec)
+      Oas3Tools.getValidOAS3(
+        spec,
+        internalOptions.oasValidatorOptions,
+        internalOptions.swagger2OpenAPIOptions
+      )
         .then((oas) => {
-          resolve(
-            translateOpenAPIToGraphQL(
-              [oas],
-              options as InternalOptions<TSource, TContext, TArgs>
-            )
-          )
+          resolve(translateOpenAPIToGraphQL([oas], internalOptions))
         })
         .catch((error) => {
           reject(error)
@@ -226,6 +211,10 @@ function translateOpenAPIToGraphQL<TSource, TContext, TArgs>(
     tokenJSONpath,
     sendOAuthTokenInQuery,
 
+    // Validation options
+    oasValidatorOptions,
+    swagger2OpenAPIOptions,
+
     // Logging options
     provideErrorExtensions,
     equivalentToMessages
@@ -260,6 +249,10 @@ function translateOpenAPIToGraphQL<TSource, TContext, TArgs>(
     viewer,
     tokenJSONpath,
     sendOAuthTokenInQuery,
+
+    // Validation options
+    oasValidatorOptions,
+    swagger2OpenAPIOptions,
 
     // Logging options
     provideErrorExtensions,
@@ -321,15 +314,23 @@ function translateOpenAPIToGraphQL<TSource, TContext, TArgs>(
 
     // Check if the operation should be added as a Query or Mutation
     if (operation.operationType === GraphQLOperationType.Query) {
-      let fieldName = !singularNames
-        ? Oas3Tools.uncapitalize(
-            operation.operation['x-graphql-operation-name'] ||
-              operation.responseDefinition.graphQLTypeName
-          )
-        : Oas3Tools.sanitize(
-            Oas3Tools.inferResourceNameFromPath(operation.path),
-            Oas3Tools.CaseStyle.camelCase
-          )
+      const extensionFieldName =
+        operation.operation[Oas3Tools.OAS_GRAPHQL_EXTENSIONS.FieldName]
+
+      if (extensionFieldName in queryFields) {
+        throw new Error(
+          `Cannot create query with name "${extensionFieldName}".\nYou provided "${extensionFieldName}" in ${Oas3Tools.OAS_GRAPHQL_EXTENSIONS.FieldName}, but it conflicts with another query called "${extensionFieldName}"`
+        )
+      }
+
+      let fieldName =
+        extensionFieldName ||
+        (!singularNames
+          ? Oas3Tools.uncapitalize(operation.responseDefinition.graphQLTypeName)
+          : Oas3Tools.sanitize(
+              Oas3Tools.inferResourceNameFromPath(operation.path),
+              Oas3Tools.CaseStyle.camelCase
+            ))
 
       if (operation.inViewer) {
         for (let securityRequirement of operation.securityRequirements) {
@@ -401,9 +402,18 @@ function translateOpenAPIToGraphQL<TSource, TContext, TArgs>(
         }
       }
     } else {
-      let saneFieldName
+      let saneFieldName: string
+      const extensionFieldName =
+        operation.operation[Oas3Tools.OAS_GRAPHQL_EXTENSIONS.FieldName]
 
-      if (!singularNames) {
+      if (extensionFieldName) {
+        if (extensionFieldName in data.saneMap) {
+          throw new Error(
+            `Cannot create mutation with name "${extensionFieldName}".\nYou provided "${extensionFieldName}" in ${Oas3Tools.OAS_GRAPHQL_EXTENSIONS.FieldName}, but it conflicts with another mutation called "${extensionFieldName}"`
+          )
+        }
+        saneFieldName = extensionFieldName
+      } else if (!singularNames) {
         /**
          * Use operationId to avoid problems differentiating operations with the
          * same path but differnet methods
@@ -484,11 +494,19 @@ function translateOpenAPIToGraphQL<TSource, TContext, TArgs>(
         Oas3Tools.CaseStyle.camelCase
       )
 
-      let saneFieldName = Oas3Tools.storeSaneName(
-        saneOperationId,
-        operationId,
-        data.saneMap
-      )
+      const extensionFieldName =
+        operation.operation[Oas3Tools.OAS_GRAPHQL_EXTENSIONS.FieldName]
+
+      if (extensionFieldName && extensionFieldName in data.saneMap) {
+        throw new Error(
+          `Cannot create subscription with name "${extensionFieldName}".\nYou provided "${extensionFieldName}" in ${Oas3Tools.OAS_GRAPHQL_EXTENSIONS.FieldName}, but it conflicts with another subscription called "${extensionFieldName}"`
+        )
+      }
+
+      const saneFieldName =
+        extensionFieldName ||
+        Oas3Tools.storeSaneName(saneOperationId, operationId, data.saneMap)
+
       if (operation.inViewer) {
         for (let securityRequirement of operation.securityRequirements) {
           if (typeof authSubscriptionFields[securityRequirement] !== 'object') {
@@ -650,7 +668,7 @@ function getFieldForOperation<TSource, TContext, TArgs>(
   operation: Operation,
   baseUrl: string,
   data: PreprocessingData<TSource, TContext, TArgs>,
-  requestOptions: NodeRequest.OptionsWithUrl,
+  requestOptions: Partial<RequestOptions<TSource, TContext, TArgs>>,
   connectOptions: ConnectOptions
 ): GraphQLFieldConfig<TSource, TContext | SubscriptionContext, TArgs> {
   // Create GraphQL Type for response:
@@ -817,5 +835,5 @@ function preliminaryChecks<TSource, TContext, TArgs>(
   checkCustomResolversStructure(options.customSubscriptionResolvers, data)
 }
 
-export { sanitize, CaseStyle } from './oas_3_tools'
+export { CaseStyle, sanitize } from './oas_3_tools'
 export { GraphQLOperationType } from './types/graphql'

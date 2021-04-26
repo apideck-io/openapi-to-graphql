@@ -4,7 +4,7 @@
 // This file is licensed under the MIT License.
 // License text available at https://opensource.org/licenses/MIT
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.GraphQLOperationType = exports.CaseStyle = exports.sanitize = exports.createGraphQLSchema = void 0;
+exports.GraphQLOperationType = exports.sanitize = exports.CaseStyle = exports.createGraphQLSchema = void 0;
 const graphql_1 = require("./types/graphql");
 const graphql_2 = require("graphql");
 // Imports:
@@ -17,78 +17,60 @@ const auth_builder_1 = require("./auth_builder");
 const debug_1 = require("debug");
 const utils_1 = require("./utils");
 const translationLog = debug_1.default('translation');
+const DEFAULT_OPTIONS = {
+    report: {
+        warnings: [],
+        numOps: 0,
+        numOpsQuery: 0,
+        numOpsMutation: 0,
+        numOpsSubscription: 0,
+        numQueriesCreated: 0,
+        numMutationsCreated: 0,
+        numSubscriptionsCreated: 0
+    },
+    // Setting default options
+    strict: false,
+    // Schema options
+    operationIdFieldNames: false,
+    fillEmptyResponses: false,
+    addLimitArgument: false,
+    idFormats: [],
+    selectQueryOrMutationField: {},
+    genericPayloadArgName: false,
+    simpleNames: false,
+    simpleEnumValues: false,
+    singularNames: false,
+    createSubscriptionsFromCallbacks: false,
+    // Resolver options
+    headers: {},
+    qs: {},
+    requestOptions: {},
+    customResolvers: {},
+    customSubscriptionResolvers: {},
+    // Authentication options
+    viewer: true,
+    sendOAuthTokenInQuery: false,
+    // Validation options
+    oasValidatorOptions: {},
+    swagger2OpenAPIOptions: {},
+    // Logging options
+    provideErrorExtensions: true,
+    equivalentToMessages: true
+};
 /**
  * Creates a GraphQL interface from the given OpenAPI Specification (2 or 3).
  */
 function createGraphQLSchema(spec, options) {
     return new Promise((resolve, reject) => {
-        if (typeof options === 'undefined') {
-            options = {};
-        }
         // Setting default options
-        options.strict =
-            typeof options.strict === 'boolean' ? options.strict : false;
-        // Schema options
-        options.operationIdFieldNames =
-            typeof options.operationIdFieldNames === 'boolean'
-                ? options.operationIdFieldNames
-                : false;
-        options.fillEmptyResponses =
-            typeof options.fillEmptyResponses === 'boolean'
-                ? options.fillEmptyResponses
-                : false;
-        options.addLimitArgument =
-            typeof options.addLimitArgument === 'boolean'
-                ? options.addLimitArgument
-                : false;
-        options.genericPayloadArgName =
-            typeof options.genericPayloadArgName === 'boolean'
-                ? options.genericPayloadArgName
-                : false;
-        options.simpleNames =
-            typeof options.simpleNames === 'boolean' ? options.simpleNames : false;
-        options.simpleEnumValues =
-            typeof options.simpleEnumValues === 'boolean'
-                ? options.simpleEnumValues
-                : false;
-        options.singularNames =
-            typeof options.singularNames === 'boolean' ? options.singularNames : false;
-        options.createSubscriptionsFromCallbacks =
-            typeof options.createSubscriptionsFromCallbacks === 'boolean'
-                ? options.createSubscriptionsFromCallbacks
-                : false;
-        // Authentication options
-        options.viewer = typeof options.viewer === 'boolean' ? options.viewer : true;
-        options.sendOAuthTokenInQuery =
-            typeof options.sendOAuthTokenInQuery === 'boolean'
-                ? options.sendOAuthTokenInQuery
-                : false;
-        // Logging options
-        options.provideErrorExtensions =
-            typeof options.provideErrorExtensions === 'boolean'
-                ? options.provideErrorExtensions
-                : true;
-        options.equivalentToMessages =
-            typeof options.equivalentToMessages === 'boolean'
-                ? options.equivalentToMessages
-                : true;
-        options['report'] = {
-            warnings: [],
-            numOps: 0,
-            numOpsQuery: 0,
-            numOpsMutation: 0,
-            numOpsSubscription: 0,
-            numQueriesCreated: 0,
-            numMutationsCreated: 0,
-            numSubscriptionsCreated: 0
-        };
+        const internalOptions = Object.assign(Object.assign({}, DEFAULT_OPTIONS), options);
         if (Array.isArray(spec)) {
             // Convert all non-OAS 3 into OAS 3
             Promise.all(spec.map((ele) => {
-                return Oas3Tools.getValidOAS3(ele);
+                return Oas3Tools.getValidOAS3(ele, internalOptions.oasValidatorOptions, internalOptions.swagger2OpenAPIOptions);
             }))
                 .then((oass) => {
-                resolve(translateOpenAPIToGraphQL(oass, options));
+                resolve(translateOpenAPIToGraphQL(oass, internalOptions));
             })
                 .catch((error) => {
                 reject(error);
@@ -100,9 +82,9 @@ function createGraphQLSchema(spec, options) {
              * If the spec is OAS 2.0, attempt to translate it into 3, then try to
              * translate the spec into a GraphQL schema
              */
-            Oas3Tools.getValidOAS3(spec)
+            Oas3Tools.getValidOAS3(spec, internalOptions.oasValidatorOptions, internalOptions.swagger2OpenAPIOptions)
                 .then((oas) => {
-                resolve(translateOpenAPIToGraphQL([oas], options));
+                resolve(translateOpenAPIToGraphQL([oas], internalOptions));
             })
                 .catch((error) => {
                 reject(error);
@@ -121,6 +103,8 @@ operationIdFieldNames, fillEmptyResponses, addLimitArgument, idFormats, selectQu
 headers, qs, requestOptions, connectOptions, baseUrl, customResolvers, customSubscriptionResolvers, 
 // Authentication options
 viewer, tokenJSONpath, sendOAuthTokenInQuery, 
+// Validation options
+oasValidatorOptions, swagger2OpenAPIOptions, 
 // Logging options
 provideErrorExtensions, equivalentToMessages }) {
     const options = {
@@ -149,6 +133,9 @@ provideErrorExtensions, equivalentToMessages }) {
         viewer,
         tokenJSONpath,
         sendOAuthTokenInQuery,
+        // Validation options
+        oasValidatorOptions,
+        swagger2OpenAPIOptions,
         // Logging options
         provideErrorExtensions,
         equivalentToMessages
@@ -175,10 +162,14 @@ provideErrorExtensions, equivalentToMessages }) {
         const saneOperationId = Oas3Tools.sanitize(operationId, Oas3Tools.CaseStyle.camelCase);
         // Check if the operation should be added as a Query or Mutation
         if (operation.operationType === graphql_1.GraphQLOperationType.Query) {
-            let fieldName = !singularNames
-                ? Oas3Tools.uncapitalize(operation.operation['x-graphql-operation-name'] ||
-                    operation.responseDefinition.graphQLTypeName)
-                : Oas3Tools.sanitize(Oas3Tools.inferResourceNameFromPath(operation.path), Oas3Tools.CaseStyle.camelCase);
+            const extensionFieldName = operation.operation[Oas3Tools.OAS_GRAPHQL_EXTENSIONS.FieldName];
+            if (extensionFieldName in queryFields) {
+                throw new Error(`Cannot create query with name "${extensionFieldName}".\nYou provided "${extensionFieldName}" in ${Oas3Tools.OAS_GRAPHQL_EXTENSIONS.FieldName}, but it conflicts with another query called "${extensionFieldName}"`);
+            }
+            let fieldName = extensionFieldName ||
+                (!singularNames
+                    ? Oas3Tools.uncapitalize(operation.responseDefinition.graphQLTypeName)
+                    : Oas3Tools.sanitize(Oas3Tools.inferResourceNameFromPath(operation.path), Oas3Tools.CaseStyle.camelCase));
             if (operation.inViewer) {
                 for (let securityRequirement of operation.securityRequirements) {
                     if (typeof authQueryFields[securityRequirement] !== 'object') {
@@ -238,7 +229,14 @@ provideErrorExtensions, equivalentToMessages }) {
         }
         else {
             let saneFieldName;
-            if (!singularNames) {
+            const extensionFieldName = operation.operation[Oas3Tools.OAS_GRAPHQL_EXTENSIONS.FieldName];
+            if (extensionFieldName) {
+                if (extensionFieldName in data.saneMap) {
+                    throw new Error(`Cannot create mutation with name "${extensionFieldName}".\nYou provided "${extensionFieldName}" in ${Oas3Tools.OAS_GRAPHQL_EXTENSIONS.FieldName}, but it conflicts with another mutation called "${extensionFieldName}"`);
+                }
+                saneFieldName = extensionFieldName;
+            }
+            else if (!singularNames) {
                 /**
                  * Use operationId to avoid problems differentiating operations with the
                  * same path but differnet methods
@@ -294,7 +292,12 @@ provideErrorExtensions, equivalentToMessages }) {
         translationLog(`Process operation '${operationId}'...`);
         let field = getFieldForOperation(operation, options.baseUrl, data, requestOptions, connectOptions);
         const saneOperationId = Oas3Tools.sanitize(operationId, Oas3Tools.CaseStyle.camelCase);
-        let saneFieldName = Oas3Tools.storeSaneName(saneOperationId, operationId, data.saneMap);
+        const extensionFieldName = operation.operation[Oas3Tools.OAS_GRAPHQL_EXTENSIONS.FieldName];
+        if (extensionFieldName && extensionFieldName in data.saneMap) {
+            throw new Error(`Cannot create subscription with name "${extensionFieldName}".\nYou provided "${extensionFieldName}" in ${Oas3Tools.OAS_GRAPHQL_EXTENSIONS.FieldName}, but it conflicts with another subscription called "${extensionFieldName}"`);
+        }
+        const saneFieldName = extensionFieldName ||
+            Oas3Tools.storeSaneName(saneOperationId, operationId, data.saneMap);
         if (operation.inViewer) {
             for (let securityRequirement of operation.securityRequirements) {
                 if (typeof authSubscriptionFields[securityRequirement] !== 'object') {
@@ -555,8 +558,8 @@ function preliminaryChecks(options, data) {
     checkCustomResolversStructure(options.customSubscriptionResolvers, data);
 }
 var oas_3_tools_1 = require("./oas_3_tools");
-Object.defineProperty(exports, "sanitize", { enumerable: true, get: function () { return oas_3_tools_1.sanitize; } });
 Object.defineProperty(exports, "CaseStyle", { enumerable: true, get: function () { return oas_3_tools_1.CaseStyle; } });
+Object.defineProperty(exports, "sanitize", { enumerable: true, get: function () { return oas_3_tools_1.sanitize; } });
 var graphql_3 = require("./types/graphql");
 Object.defineProperty(exports, "GraphQLOperationType", { enumerable: true, get: function () { return graphql_3.GraphQLOperationType; } });
 //# sourceMappingURL=index.js.map

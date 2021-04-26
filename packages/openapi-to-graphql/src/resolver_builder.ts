@@ -57,7 +57,7 @@ type GetResolverParams<TSource, TContext, TArgs> = {
   responseName?: string
   data: PreprocessingData<TSource, TContext, TArgs>
   baseUrl?: string
-  requestOptions?: RequestOptions<TSource, TContext, TArgs>
+  requestOptions?: Partial<RequestOptions<TSource, TContext, TArgs>>
 }
 
 type GetSubscribeParams<TSource, TContext, TArgs> = {
@@ -362,7 +362,7 @@ export function getResolver<TSource, TContext, TArgs>({
     return customResolvers[title][path][method]
   }
 
-  // Return resolve function :
+  // Return resolve function:
   return (source, args, context, info) => {
     /**
      * Fetch resolveData from possibly existing _openAPIToGraphQL
@@ -414,15 +414,14 @@ export function getResolver<TSource, TContext, TArgs>({
         typeof param.schema === 'object'
       ) {
         let schema = param.schema
-        if (schema && schema.$ref && typeof schema.$ref === 'string') {
-          schema = Oas3Tools.resolveRef(schema.$ref, operation.oas)
+        if ('$ref' in schema) {
+          schema = Oas3Tools.resolveRef<SchemaObject>(
+            schema.$ref,
+            operation.oas
+          )
         }
-        if (
-          schema &&
-          (schema as SchemaObject).default &&
-          typeof (schema as SchemaObject).default !== 'undefined'
-        ) {
-          args[saneParamName] = (schema as SchemaObject).default
+        if (schema && schema.default && typeof schema.default !== 'undefined') {
+          args[saneParamName] = schema.default
         }
       }
     })
@@ -862,11 +861,11 @@ export function getResolver<TSource, TContext, TArgs>({
               operation.statusCode,
               operation.oas
             )
-            if (responseContentType === null) {
+
+            if (typeof responseContentType !== 'string') {
               resolve(null)
             } else {
-              const errorString =
-                'Response does not have a Content-Type property'
+              const errorString = 'Response does not have a Content-Type header'
 
               httpLog(errorString)
               reject(errorString)

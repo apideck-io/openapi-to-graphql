@@ -7,6 +7,7 @@ import { Oas3, ServerObject, ParameterObject, SchemaObject, OperationObject, Res
 import { PreprocessingData, ProcessedSecurityScheme } from './types/preprocessing_data';
 import { InternalOptions } from './types/options';
 export declare type SchemaNames = {
+    fromExtension?: string;
     fromRef?: string;
     fromSchema?: string;
     fromPath?: string;
@@ -38,6 +39,11 @@ export declare enum HTTP_METHODS {
     'head' = "head"
 }
 export declare const SUCCESS_STATUS_RX: RegExp;
+export declare enum OAS_GRAPHQL_EXTENSIONS {
+    TypeName = "x-graphql-type-name",
+    FieldName = "x-graphql-field-name",
+    EnumMapping = "x-graphql-enum-mapping"
+}
 /**
  * Given an HTTP method, convert it to the HTTP_METHODS enum
  */
@@ -46,7 +52,7 @@ export declare function methodToHttpMethod(method: string): HTTP_METHODS;
  * Resolves on a validated OAS 3 for the given spec (OAS 2 or OAS 3), or rejects
  * if errors occur.
  */
-export declare function getValidOAS3(spec: Oas2 | Oas3): Promise<Oas3>;
+export declare function getValidOAS3(spec: Oas2 | Oas3, oasValidatorOptions: object, swagger2OpenAPIOptions: object): Promise<Oas3>;
 /**
  * Counts the number of operations in an OAS.
  */
@@ -70,7 +76,7 @@ export declare function countOperationsWithPayload(oas: Oas3): number;
 /**
  * Resolves the given reference in the given object.
  */
-export declare function resolveRef(ref: string, oas: Oas3): any;
+export declare function resolveRef<T = any>(ref: string, oas: Oas3): T;
 /**
  * Returns the base URL to use for the given operation.
  */
@@ -99,12 +105,12 @@ export declare function getSchemaTargetGraphQLType<TSource, TContext, TArgs>(sch
  */
 export declare function inferResourceNameFromPath(path: string): string;
 /**
- * Returns JSON-compatible schema required by the given operation
+ * Get the request object for a given operation
  */
 export declare function getRequestBodyObject(operation: OperationObject, oas: Oas3): {
-    payloadContentType: string;
-    requestBodyObject: RequestBodyObject;
-} | null;
+    payloadContentType?: string;
+    requestBodyObject?: RequestBodyObject;
+};
 /**
  * Returns the request schema (if any) for the given operation,
  * a dictionary of names from different sources (if available), and whether the
@@ -117,11 +123,13 @@ export declare function getRequestSchemaAndNames(path: string, method: HTTP_METH
 export declare function filterProperties(schema: SchemaObject, whitelist: string[]): SchemaObject;
 /**
  * Returns JSON-compatible schema produced by the given operation
+ * Select a response object for a given operation and status code, prioritizing
+ * objects with a JSON content-type
  */
 export declare function getResponseObject(operation: OperationObject, statusCode: string, oas: Oas3): {
-    responseContentType: string;
-    responseObject: ResponseObject;
-} | null;
+    responseContentType?: string;
+    responseObject?: ResponseObject;
+};
 /**
  * Returns the response schema for the given operation,
  * a successful  status code, and a dictionary of names from different sources
@@ -131,7 +139,7 @@ export declare function getResponseSchemaAndNames<TSource, TContext, TArgs>(path
 /**
  * Returns a success status code for the given operation
  */
-export declare function getResponseStatusCode<TSource, TContext, TArgs>(path: string, method: string, operation: OperationObject, oas: Oas3, data: PreprocessingData<TSource, TContext, TArgs>): string | void;
+export declare function getResponseStatusCode<TSource, TContext, TArgs>(path: string, method: string, operation: OperationObject, oas: Oas3, data: PreprocessingData<TSource, TContext, TArgs>): string;
 /**
  * Returns a hash containing the links in the given operation.
  */

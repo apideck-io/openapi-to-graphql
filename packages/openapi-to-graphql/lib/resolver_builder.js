@@ -201,7 +201,7 @@ function getResolver({ operation, argsFromLink = {}, payloadName, data, baseUrl,
         translationLog(`Use custom resolver for ${operation.operationString}`);
         return customResolvers[title][path][method];
     }
-    // Return resolve function :
+    // Return resolve function:
     return (source, args, context, info) => {
         /**
          * Fetch resolveData from possibly existing _openAPIToGraphQL
@@ -240,12 +240,10 @@ function getResolver({ operation, argsFromLink = {}, payloadName, data, baseUrl,
                 param.schema &&
                 typeof param.schema === 'object') {
                 let schema = param.schema;
-                if (schema && schema.$ref && typeof schema.$ref === 'string') {
+                if ('$ref' in schema) {
                     schema = Oas3Tools.resolveRef(schema.$ref, operation.oas);
                 }
-                if (schema &&
-                    schema.default &&
-                    typeof schema.default !== 'undefined') {
+                if (schema && schema.default && typeof schema.default !== 'undefined') {
                     args[saneParamName] = schema.default;
                 }
             }
@@ -575,11 +573,11 @@ function getResolver({ operation, argsFromLink = {}, payloadName, data, baseUrl,
                          * a content-type
                          */
                         const { responseContentType } = Oas3Tools.getResponseObject(operation, operation.statusCode, operation.oas);
-                        if (responseContentType === null) {
+                        if (typeof responseContentType !== 'string') {
                             resolve(null);
                         }
                         else {
-                            const errorString = 'Response does not have a Content-Type property';
+                            const errorString = 'Response does not have a Content-Type header';
                             httpLog(errorString);
                             reject(errorString);
                         }
