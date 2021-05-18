@@ -26,7 +26,7 @@ import * as deepEqual from 'deep-equal'
 import debug from 'debug'
 import { handleWarning, getCommonPropertyNames, MitigationTypes } from './utils'
 import { GraphQLOperationType } from './types/graphql'
-import { methodToHttpMethod } from './oas_3_tools'
+import { methodToHttpMethod, resolveRef } from './oas_3_tools'
 
 const preprocessingLog = debug('preprocessing')
 
@@ -885,22 +885,28 @@ export function createDataDef<TSource, TContext, TArgs>(
               // Break schema down into component parts
               // I.e. if it is an list type, create a reference to the list item type
               // Or if it is an object type, create references to all of the field types
-              let itemsSchema = collapsedSchema.items
-              let itemsName = `${name}ListItem`
-              const fromExtension =
-                collapsedSchema[Oas3Tools.OAS_GRAPHQL_EXTENSIONS.TypeName]
+              let itemsSchema: SchemaObject
+              const fromPath = `${name}ListItem`
+              let fromRef: string
 
-              if ('$ref' in itemsSchema) {
-                itemsName = itemsSchema.$ref.split('/').pop()
+              if ('$ref' in collapsedSchema.items) {
+                fromRef = collapsedSchema.items.$ref.split('/').pop()
+                itemsSchema = resolveRef(collapsedSchema.items.$ref, oas)
+              } else {
+                itemsSchema = collapsedSchema.items
               }
+
+              const fromExtension =
+                itemsSchema[Oas3Tools.OAS_GRAPHQL_EXTENSIONS.TypeName]
 
               const subDefinition = createDataDef(
                 // Is this the correct classification for this name? It does not matter in the long run.
                 {
                   fromExtension,
-                  fromRef: itemsName
+                  fromRef,
+                  fromPath
                 },
-                itemsSchema as SchemaObject,
+                itemsSchema,
                 isInputObjectType,
                 data,
                 oas
@@ -1002,6 +1008,8 @@ function getSchemaIndex(
 function getPreferredName(names: Oas3Tools.SchemaNames): string {
   if (typeof names.preferred === 'string') {
     return Oas3Tools.sanitize(names.preferred, Oas3Tools.CaseStyle.PascalCase) // CASE: preferred name already known
+  } else if (typeof names.fromExtension === 'string') {
+    return names.fromExtension // CASE: name from extension
   } else if (typeof names.fromRef === 'string') {
     return Oas3Tools.sanitize(names.fromRef, Oas3Tools.CaseStyle.PascalCase) // CASE: name from reference
   } else if (typeof names.fromSchema === 'string') {

@@ -612,17 +612,23 @@ function createDataDef(names, schema, isInputObjectType, data, oas, links) {
                             // Break schema down into component parts
                             // I.e. if it is an list type, create a reference to the list item type
                             // Or if it is an object type, create references to all of the field types
-                            let itemsSchema = collapsedSchema.items;
-                            let itemsName = `${name}ListItem`;
-                            const fromExtension = collapsedSchema[Oas3Tools.OAS_GRAPHQL_EXTENSIONS.TypeName];
-                            if ('$ref' in itemsSchema) {
-                                itemsName = itemsSchema.$ref.split('/').pop();
+                            let itemsSchema;
+                            const fromPath = `${name}ListItem`;
+                            let fromRef;
+                            if ('$ref' in collapsedSchema.items) {
+                                fromRef = collapsedSchema.items.$ref.split('/').pop();
+                                itemsSchema = oas_3_tools_1.resolveRef(collapsedSchema.items.$ref, oas);
                             }
+                            else {
+                                itemsSchema = collapsedSchema.items;
+                            }
+                            const fromExtension = itemsSchema[Oas3Tools.OAS_GRAPHQL_EXTENSIONS.TypeName];
                             const subDefinition = createDataDef(
                             // Is this the correct classification for this name? It does not matter in the long run.
                             {
                                 fromExtension,
-                                fromRef: itemsName
+                                fromRef,
+                                fromPath
                             }, itemsSchema, isInputObjectType, data, oas);
                             // Add list item reference
                             def.subDefinitions = subDefinition;
@@ -696,6 +702,9 @@ function getSchemaIndex(preferredName, schema, dataDefs) {
 function getPreferredName(names) {
     if (typeof names.preferred === 'string') {
         return Oas3Tools.sanitize(names.preferred, Oas3Tools.CaseStyle.PascalCase); // CASE: preferred name already known
+    }
+    else if (typeof names.fromExtension === 'string') {
+        return names.fromExtension; // CASE: name from extension
     }
     else if (typeof names.fromRef === 'string') {
         return Oas3Tools.sanitize(names.fromRef, Oas3Tools.CaseStyle.PascalCase); // CASE: name from reference
