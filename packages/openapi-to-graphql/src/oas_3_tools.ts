@@ -91,7 +91,8 @@ export const SUCCESS_STATUS_RX = /2[0-9]{2}|2XX/
 export enum OAS_GRAPHQL_EXTENSIONS {
   TypeName = 'x-graphql-type-name',
   FieldName = 'x-graphql-field-name',
-  EnumMapping = 'x-graphql-enum-mapping'
+  EnumMapping = 'x-graphql-enum-mapping',
+  Exclude = 'x-graphql-exclude'
 }
 
 /**
@@ -796,11 +797,14 @@ export function getResponseSchemaAndNames<TSource, TContext, TArgs>(
   }
 
   // @Apideck: We always use data in our responses
-  const dataSchema = responseSchema.properties.data
-  const isListCall = Boolean(responseSchema.properties.links)
+  const dataSchema = responseSchema.properties?.data
+  const isListCall = Boolean(responseSchema.properties?.links)
 
   let resolvedDataSchema: SchemaObject
-  if ('$ref' in dataSchema) {
+  if (!dataSchema) {
+    console.log(responseSchema)
+    resolvedDataSchema = responseSchema
+  } else if ('$ref' in dataSchema) {
     resolvedDataSchema = resolveRef<SchemaObject>(dataSchema.$ref, oas)
     if (!isListCall) {
       fromRef = dataSchema.$ref.split('/').pop()

@@ -32,6 +32,7 @@ var OAS_GRAPHQL_EXTENSIONS;
     OAS_GRAPHQL_EXTENSIONS["TypeName"] = "x-graphql-type-name";
     OAS_GRAPHQL_EXTENSIONS["FieldName"] = "x-graphql-field-name";
     OAS_GRAPHQL_EXTENSIONS["EnumMapping"] = "x-graphql-enum-mapping";
+    OAS_GRAPHQL_EXTENSIONS["Exclude"] = "x-graphql-exclude";
 })(OAS_GRAPHQL_EXTENSIONS = exports.OAS_GRAPHQL_EXTENSIONS || (exports.OAS_GRAPHQL_EXTENSIONS = {}));
 /**
  * Given an HTTP method, convert it to the HTTP_METHODS enum
@@ -565,7 +566,7 @@ exports.getResponseObject = getResponseObject;
  * (if available).
  */
 function getResponseSchemaAndNames(path, method, operation, oas, data, options) {
-    var _a, _b;
+    var _a, _b, _c, _d;
     const statusCode = getResponseStatusCode(path, method, operation, oas, data);
     if (!statusCode) {
         return {};
@@ -597,10 +598,14 @@ function getResponseSchemaAndNames(path, method, operation, oas, data, options) 
         responseSchema = responseSchemaOrRef;
     }
     // @Apideck: We always use data in our responses
-    const dataSchema = responseSchema.properties.data;
-    const isListCall = Boolean(responseSchema.properties.links);
+    const dataSchema = (_c = responseSchema.properties) === null || _c === void 0 ? void 0 : _c.data;
+    const isListCall = Boolean((_d = responseSchema.properties) === null || _d === void 0 ? void 0 : _d.links);
     let resolvedDataSchema;
-    if ('$ref' in dataSchema) {
+    if (!dataSchema) {
+        console.log(responseSchema);
+        resolvedDataSchema = responseSchema;
+    }
+    else if ('$ref' in dataSchema) {
         resolvedDataSchema = resolveRef(dataSchema.$ref, oas);
         if (!isListCall) {
             fromRef = dataSchema.$ref.split('/').pop();

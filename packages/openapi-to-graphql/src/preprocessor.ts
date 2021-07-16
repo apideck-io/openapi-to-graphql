@@ -323,6 +323,7 @@ export function preprocessOas<TSource, TContext, TArgs>(
              */
             if (
               operationData &&
+              operation[Oas3Tools.OAS_GRAPHQL_EXTENSIONS.Exclude] !== true &&
               !(operationData.operationId in data.operations)
             ) {
               data.operations[operationData.operationId] = operationData
