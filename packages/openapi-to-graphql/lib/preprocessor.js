@@ -125,7 +125,8 @@ function preprocessOas(oass, options) {
         data.options.report.numOpsMutation += Oas3Tools.countOperationsMutation(oas);
         data.options.report.numOpsQuery += Oas3Tools.countOperationsQuery(oas);
         if (data.options.createSubscriptionsFromCallbacks) {
-            data.options.report.numOpsSubscription += Oas3Tools.countOperationsSubscription(oas);
+            data.options.report.numOpsSubscription +=
+                Oas3Tools.countOperationsSubscription(oas);
         }
         else {
             data.options.report.numOpsSubscription = 0;
@@ -250,7 +251,8 @@ function preprocessOas(oass, options) {
                                     : Oas3Tools.formatOperationString(httpMethod, callbackName, oas.info.title);
                                 let callbackHttpMethod;
                                 try {
-                                    callbackHttpMethod = oas_3_tools_1.methodToHttpMethod(callbackRawMethod);
+                                    callbackHttpMethod =
+                                        oas_3_tools_1.methodToHttpMethod(callbackRawMethod);
                                 }
                                 catch (e) {
                                     utils_1.handleWarning({
@@ -525,7 +527,7 @@ function createDataDef(names, schema, isInputObjectType, data, oas, links) {
             let saneName;
             if (name === names.fromExtension) {
                 saneName = name;
-                saneInputName = name;
+                saneInputName = name + 'Input';
             }
             else {
                 // Store and sanitize the name

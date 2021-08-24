@@ -215,9 +215,8 @@ export function preprocessOas<TSource, TContext, TArgs>(
     data.options.report.numOpsMutation += Oas3Tools.countOperationsMutation(oas)
     data.options.report.numOpsQuery += Oas3Tools.countOperationsQuery(oas)
     if (data.options.createSubscriptionsFromCallbacks) {
-      data.options.report.numOpsSubscription += Oas3Tools.countOperationsSubscription(
-        oas
-      )
+      data.options.report.numOpsSubscription +=
+        Oas3Tools.countOperationsSubscription(oas)
     } else {
       data.options.report.numOpsSubscription = 0
     }
@@ -402,9 +401,8 @@ export function preprocessOas<TSource, TContext, TArgs>(
                       let callbackHttpMethod: Oas3Tools.HTTP_METHODS
 
                       try {
-                        callbackHttpMethod = methodToHttpMethod(
-                          callbackRawMethod
-                        )
+                        callbackHttpMethod =
+                          methodToHttpMethod(callbackRawMethod)
                       } catch (e) {
                         handleWarning({
                           mitigationType: MitigationTypes.INVALID_HTTP_METHOD,
@@ -762,7 +760,7 @@ export function createDataDef<TSource, TContext, TArgs>(
 
       if (name === names.fromExtension) {
         saneName = name
-        saneInputName = name
+        saneInputName = name + 'Input'
       } else {
         // Store and sanitize the name
         saneName = !data.options.simpleNames

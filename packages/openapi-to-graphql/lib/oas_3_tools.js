@@ -471,7 +471,8 @@ function getRequestSchemaAndNames(path, method, operation, oas) {
     }
     // Determine if request body is required:
     const payloadRequired = typeof (requestBodyObject === null || requestBodyObject === void 0 ? void 0 : requestBodyObject.required) === 'boolean'
-        ? requestBodyObject === null || requestBodyObject === void 0 ? void 0 : requestBodyObject.required : false;
+        ? requestBodyObject === null || requestBodyObject === void 0 ? void 0 : requestBodyObject.required
+        : false;
     payloadSchemaNames = {
         fromExtension: payloadSchema === null || payloadSchema === void 0 ? void 0 : payloadSchema[OAS_GRAPHQL_EXTENSIONS.TypeName],
         fromRef,
