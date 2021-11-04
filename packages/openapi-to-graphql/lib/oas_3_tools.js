@@ -471,8 +471,7 @@ function getRequestSchemaAndNames(path, method, operation, oas) {
     }
     // Determine if request body is required:
     const payloadRequired = typeof (requestBodyObject === null || requestBodyObject === void 0 ? void 0 : requestBodyObject.required) === 'boolean'
-        ? requestBodyObject === null || requestBodyObject === void 0 ? void 0 : requestBodyObject.required
-        : false;
+        ? requestBodyObject === null || requestBodyObject === void 0 ? void 0 : requestBodyObject.required : false;
     payloadSchemaNames = {
         fromExtension: payloadSchema === null || payloadSchema === void 0 ? void 0 : payloadSchema[OAS_GRAPHQL_EXTENSIONS.TypeName],
         fromRef,
@@ -603,7 +602,6 @@ function getResponseSchemaAndNames(path, method, operation, oas, data, options) 
     const isListCall = Boolean((_d = responseSchema.properties) === null || _d === void 0 ? void 0 : _d.links);
     let resolvedDataSchema;
     if (!dataSchema) {
-        console.log(responseSchema);
         resolvedDataSchema = responseSchema;
     }
     else if ('$ref' in dataSchema) {

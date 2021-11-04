@@ -475,9 +475,7 @@ export function getSchemaTargetGraphQLType<TSource, TContext, TArgs>(
  * components as well as an updated list of paths where the common prefix was
  * removed.
  */
-function extractBasePath(
-  paths: string[]
-): {
+function extractBasePath(paths: string[]): {
   basePath: string
   updatedPaths: string[]
 } {
@@ -802,7 +800,6 @@ export function getResponseSchemaAndNames<TSource, TContext, TArgs>(
 
   let resolvedDataSchema: SchemaObject
   if (!dataSchema) {
-    console.log(responseSchema)
     resolvedDataSchema = responseSchema
   } else if ('$ref' in dataSchema) {
     resolvedDataSchema = resolveRef<SchemaObject>(dataSchema.$ref, oas)
@@ -1043,9 +1040,9 @@ export function getServers(
  * Returns a map of security scheme definitions, identified by keys. Resolves
  * possible references.
  */
-export function getSecuritySchemes(
-  oas: Oas3
-): { [schemeKey: string]: SecuritySchemeObject } {
+export function getSecuritySchemes(oas: Oas3): {
+  [schemeKey: string]: SecuritySchemeObject
+} {
   // Collect all security schemes:
   const securitySchemes: { [schemeKey: string]: SecuritySchemeObject } = {}
   if (

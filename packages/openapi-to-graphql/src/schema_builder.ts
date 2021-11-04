@@ -269,7 +269,9 @@ function createOrReuseOt<TSource, TContext, TArgs>({
       fields: () => {
         return createFields({
           def,
-          links: def.links,
+          // @Apideck: disable links
+          // links: def.links,
+          links: null,
           operation,
           data,
           iteration,
