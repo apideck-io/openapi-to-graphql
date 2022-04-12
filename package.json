@@ -5,7 +5,7 @@
     "test": "cd packages/openapi-to-graphql/ && npm test"
   },
   "devDependencies": {
-    "lerna": "^3.22.1"
+    "lerna": "^4.0.0"
   },
   "engines": {
     "node": ">=8"
